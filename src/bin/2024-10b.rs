@@ -17,6 +17,14 @@ impl Coord {
             Coord { r: self.r, c: self.c - 1 }, // Left
         ]
     }
+    // A helper to filter valid moves
+    fn valid_neighbors(&self, grid: &[Vec<u8>], height: isize, width: isize, current_h: u8) -> impl Iterator<Item = Coord> {
+        self.neighbors().into_iter().filter(move |n| {
+            n.r >= 0 && n.r < height && 
+            n.c >= 0 && n.c < width && 
+            grid[n.r as usize][n.c as usize] == current_h + 1
+        })
+    }
 }
 
 fn main() {
@@ -49,19 +57,12 @@ fn main() {
     for start in trailheads.iter() {
         let mut current_positions: HashSet<Coord> = HashSet::from([*start]);
 
-        for target_height in 1..=9 {
+        for target_height in 0..=8 {
             let mut next_positions: HashSet<Coord> = HashSet::new();
 
             for pos in current_positions {
-                for next in pos.neighbors() {
-                    // Check bounds
-                    if next.r < 0 || next.r >= height || next.c < 0 || next.c >= width {
-                        continue;
-                    }
-                    // Check height requirement
-                    if grid[next.r as usize][next.c as usize] == target_height {
-                        next_positions.insert(next);
-                    }
+                for next in pos.valid_neighbors(&grid, height, width, target_height) {
+                    next_positions.insert(next);
                 }
             }
             // Move forward
@@ -79,15 +80,8 @@ fn main() {
             let mut next_positions: HashMap<Coord, u32>  = HashMap::new();
 
             for (pos, count) in current_positions {
-                for next in pos.neighbors() {
-                    // Check bounds
-                    if next.r < 0 || next.r >= height || next.c < 0 || next.c >= width {
-                        continue;
-                    }
-                    // Check height requirement
-                    if grid[next.r as usize][next.c as usize] == target_height {
-                        *next_positions.entry(next).or_insert(0) += count;
-                    }
+                for next in pos.valid_neighbors(&grid, height, width, target_height) {                    
+                    *next_positions.entry(next).or_insert(0) += count;                    
                 }
             }
             // Move forward
