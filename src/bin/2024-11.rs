@@ -1,62 +1,64 @@
-use std::fs;
 use std::collections::HashMap;
+use std::fs;
 use std::time::Instant;
 
-fn blink(stone: u64, blinks: u8, cache: &mut HashMap<(u64, u8), u64>) -> u64 {
+fn blink(stone: u64, blinks: u32, cache: &mut HashMap<(u64, u32), u64>) -> u64 {
+    // Base case: If no blinks left, this stone counts as 1
     if blinks == 0 {
         return 1;
     }
 
-    if let Some(&result) = cache.get(&(stone, blinks)) {
-        return result;
+    // Check cache
+    if let Some(&count) = cache.get(&(stone, blinks)) {
+        return count;
     }
 
-    let result: u64;
-
-    let s = stone.to_string();
-    if stone == 0 {
-        result = blink(1, blinks - 1, cache);
-    } else if s.len() % 2 == 0 {
-        let mid = s.len() / 2;
-        let (left_s, right_s) = s.split_at(mid);
-        
-        let left_val = left_s.parse().unwrap();
-        let right_val = right_s.parse().unwrap();
-
-        let left_count = blink(left_val, blinks - 1, cache);
-        let right_count = blink(right_val, blinks - 1, cache);
-        result = left_count + right_count;
+    let result = if stone == 0 {
+        blink(1, blinks - 1, cache)
     } else {
-        result = blink(stone * 2024, blinks - 1, cache);
-    }
+        // Calculate number of digits using log10
+        // (stone.ilog10() returns 0 for digits 1-9, 1 for 10-99, etc.)
+        let digits = stone.ilog10() + 1;
+        
+        if digits % 2 == 0 {
+            let divisor = 10_u64.pow(digits / 2);
+            let left = stone / divisor;
+            let right = stone % divisor;
+            
+            blink(left, blinks - 1, cache) + blink(right, blinks - 1, cache)
+        } else {
+            blink(stone * 2024, blinks - 1, cache)
+        }
+    };
 
+    // Store in cache
     cache.insert((stone, blinks), result);
-
     result
 }
 
 fn main() {
     let input = fs::read_to_string("data/2024/11/input.txt")
         .expect("Should have been able to read the file");
+    
+    let start_time = Instant::now();
 
     let stones: Vec<u64> = input
-        .trim()
-        .split(" ")
-        .map(|n| n.parse().unwrap())
+        .split_whitespace()
+        .map(|n| n.parse().expect("Invalid number"))
         .collect();
 
-    let mut cache: HashMap<(u64, u8), u64> = HashMap::new();
-    let mut result_p1 = 0;
-    for stone in stones.iter() {
-        result_p1 += blink(*stone, 25, &mut cache);
-    }
+    let mut cache = HashMap::new();
 
-    let mut result_p2 = 0;
-    for stone in stones.iter() {
-        result_p2 += blink(*stone, 75, &mut cache);
-    }
+    // Part 1
+    let result_p1: u64 = stones.iter()
+        .map(|&stone| blink(stone, 25, &mut cache))
+        .sum();
 
-    let start_time = Instant::now();
+    // Part 2
+    // Keep the same cache!
+    let result_p2: u64 = stones.iter()
+        .map(|&stone| blink(stone, 75, &mut cache))
+        .sum();
 
     println!("Part 1 Answer: {}", result_p1);
     println!("Part 2 Answer: {}", result_p2);
