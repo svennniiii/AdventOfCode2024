@@ -1,10 +1,8 @@
 use std::fs;
 use std::collections::HashSet;
-use std::hash::Hash;
-use std::sync::atomic::AtomicIsize;
 use std::time::Instant;
 
-#[derive(Hash, Eq, PartialEq)]
+#[derive(Hash, Eq, PartialEq, Copy, Clone)]
 struct Coord {
     r: isize,
     c: isize,
@@ -21,18 +19,55 @@ impl Coord {
     }
 }
 
-fn calculate_cost(start: &Coord, checked_coords: &mut HashSet<Coord>) -> u32 {
-    // Implement flood fill for each plot
-    // keep track of fence
+fn calculate_cost(start: &Coord, checked_coords: &mut HashSet<Coord>, farm: &Vec<Vec<char>>, height: usize, width: usize) -> u32 {
+    let mut to_check: Vec<Coord> = Vec::new();
+    to_check.push(*start);
 
-    return 0;
+    let mut fence = 0;
+    let mut area = 0;
+    let plant = farm[start.r as usize][start.c as usize];
+
+    while !to_check.is_empty() {
+        let coord = to_check.pop().unwrap();
+        if checked_coords.contains(&coord){
+            continue;
+        }
+        //if farm[coord.r as usize][coord.c as usize] != plant {
+        //    continue;
+        //}
+
+        checked_coords.insert(coord);
+        
+        area += 1;
+        fence += 4;
+
+        for neighbor in coord.neighbors() {
+            let Coord{c: nc, r:nr} = neighbor;
+            if nr < 0 || nr >= height as isize {
+                continue;
+            } else if nc < 0 || nc >= width as isize {
+                continue;
+            } else if farm[nr as usize][nc as usize] != plant {
+                continue;
+            }
+
+            fence -= 1;
+
+            if !checked_coords.contains(&neighbor) {
+                to_check.push(neighbor);
+            }
+        }
+
+    }
+    println!("{} {} {}", plant, area, fence);
+    area * fence
 }
 
 fn main() {
-    let input = fs::read_to_string("data/2024/12/example.txt")
+    let input = fs::read_to_string("data/2024/12/input.txt")
         .expect("Should have been able to read the file");
     
-    let farm: Vec<&str> = input.trim().lines().collect();
+    let farm: Vec<Vec<char>> = input.trim().lines().map(|l| l.chars().collect()).collect();
     let mut checked_coords: HashSet<Coord> = HashSet::new();
 
     let height = farm.len();
@@ -47,7 +82,7 @@ fn main() {
                 continue;
             }
 
-            cost += calculate_cost(&current_coord, &mut checked_coords);
+            cost += calculate_cost(&current_coord, &mut checked_coords, &farm, height, width);
         }
     }
 
